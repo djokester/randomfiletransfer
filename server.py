@@ -137,6 +137,7 @@ def predict():
             temp = " ".join(temp)
             output2.append(temp)
         output2 = [i for i in output2 if i.lower()!= "prologic assistant"]
+        output2 = [i.replace("prologic assistant", "") for i in output2]
         data["predictions"] = "The entities are " + ",".join(output2)
         data["success"] = True
         print(json.dumps(data))
