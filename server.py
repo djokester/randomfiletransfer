@@ -19,11 +19,11 @@ port = "9000"
 nlp = StanfordCoreNLP(host + ":" + port)
 
 def classify(text):
-    if text in ["JJ", "JJR", "JJS"]:
+    if text["pos"] in ["JJ", "JJR", "JJS"]:
         return("Descriptor")
-    if text in ["NN", "NNP","NNPS", "NNS"]:
+    if text["pos"] in ["NN", "NNP","NNPS", "NNS", "CD"]:
         return("Entity")
-    if text in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"]:
+    if text["pos"] in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"] or text["originalText"] == "n't":
         return("Action/Service")
     
 def pos(text):
@@ -31,7 +31,7 @@ def pos(text):
     port = "9000" 
     nlp = StanfordCoreNLP(host + ":" + port)
     lst = []
-    print("POS", text)
+    #print("POS", text)
     output = nlp.annotate(
     text,
     properties={
@@ -43,12 +43,12 @@ def pos(text):
     for i in output["sentences"]:
         lst2 = lst2 + i["tokens"]
     #print(output)
-    interest = ["JJ", "JJR", "JJS", "NN", "NNP","NNPS", "NNS", "VB", "VBD", "VBG", "VBZ", "VBN", "VBP"]
+    interest = ["JJ", "JJR", "JJS", "NN", "NNP","NNPS", "NNS", "VB", "VBD", "VBG", "VBZ", "VBN", "VBP", "CD"]
     
     for i in lst2:
-        if i["pos"] in interest:
-            lst.append([i["originalText"], classify(i["pos"])])
-    print("POS OUTPUT", lst)
+        if i["pos"] in interest or i["originalText"] == "n't":
+            lst.append([i["originalText"], i["index"], classify(i)])
+    #print("POS OUTPUT", lst)
     return(lst)
     #return(output)
 
@@ -105,8 +105,39 @@ def predict():
         parts_of_speech = pos(query)
         named_entities = ner(query)
         #x["measures"] = out[0]
-        print(parts_of_speech)
-        data["predictions"] = pos(query) + ner(query)
+        print(named_entities)
+        predictions = pos(query) + ner(query)
+        #print(predictions)
+        output = []
+        counter = 0
+        while counter <= len(parts_of_speech)-1:
+            item = parts_of_speech[counter]
+            index = counter
+            temp = [item]
+            count = item[1]
+            print(temp)
+            if counter == len(parts_of_speech)-1:
+                output.append(temp)
+                break
+            else:
+                for i in parts_of_speech[index+1:]:
+                    if i[1] == count+1:
+                        temp.append(i)
+                        count+=1
+                        counter = parts_of_speech.index(i)
+                    else:
+                        counter = counter+1
+                        break
+                
+            output.append(temp)
+        #print(output)
+        output2 = []
+        for i in output:
+            temp = [j[0] for j in i]
+            temp = " ".join(temp)
+            output2.append(temp)
+        output2 = [i for i in output2 if i.lower()!= "prologic assistant"]
+        data["predictions"] = "The entities are " + ",".join(output2)
         data["success"] = True
         print(json.dumps(data))
     return flask.jsonify(data)
@@ -115,5 +146,5 @@ if __name__ == "__main__":
     print(("* Loading Keras model and Flask starting server..."
         "please wait until server has fully started"))
     #loadModel()
-    app.run(host='0.0.0.0', port = 8000)
+    app.run(host='0.0.0.0', port = 8080)
     
