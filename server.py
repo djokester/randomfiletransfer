@@ -23,7 +23,7 @@ def classify(text):
         return("Descriptor")
     if text["pos"] in ["NN", "NNP","NNPS", "NNS", "CD"]:
         return("Entity")
-    if text["pos"] in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"] or text["originalText"] == "n't":
+    if text["pos"] in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"] or text["originalText"] == "n't" or text["originalText"] == "not":
         return("Action/Service")
     
 def pos(text):
@@ -46,7 +46,7 @@ def pos(text):
     interest = ["JJ", "JJR", "JJS", "NN", "NNP","NNPS", "NNS", "VB", "VBD", "VBG", "VBZ", "VBN", "VBP", "CD"]
     
     for i in lst2:
-        if i["pos"] in interest or i["originalText"] == "n't":
+        if i["pos"] in interest or i["originalText"] == "n't" or i["originalText"] == "not":
             lst.append([i["originalText"], i["index"], classify(i)])
     #print("POS OUTPUT", lst)
     return(lst)
@@ -125,6 +125,8 @@ def predict():
                         temp.append(i)
                         count+=1
                         counter = parts_of_speech.index(i)
+                        if counter == len(parts_of_speech)-1:
+                            counter = counter+1
                     else:
                         counter = counter+1
                         break
@@ -136,8 +138,8 @@ def predict():
             temp = [j[0] for j in i]
             temp = " ".join(temp)
             output2.append(temp)
-        output2 = [i for i in output2 if i.lower()!= "prologic assistant"]
-        output2 = [i.replace("prologic assistant", "") for i in output2]
+        output2 = [i for i in output2 if i.lower() != "nixie"]
+        output2 = [i.replace("nixie", "") for i in output2]
         data["predictions"] = "The entities are " + ",".join(output2)
         data["success"] = True
         print(json.dumps(data))
