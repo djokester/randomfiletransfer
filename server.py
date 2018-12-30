@@ -21,10 +21,12 @@ nlp = StanfordCoreNLP(host + ":" + port)
 def classify(text):
     if text["pos"] in ["JJ", "JJR", "JJS"]:
         return("Descriptor")
-    if text["pos"] in ["NN", "NNP","NNPS", "NNS", "CD"]:
-        return("Entity")
-    if text["pos"] in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"] or text["originalText"] == "n't" or text["originalText"] == "not":
-        return("Action/Service")
+    else:
+        if text["pos"] in ["NN", "NNP","NNPS", "NNS", "CD"] or text["originalText"].lower() == "am":
+            return("Entity")
+        else:
+            if text["pos"] in ["VB", "VBD", "VBG", "VBZ", "VBN", "VBP"] or text["originalText"] == "n't" or text["originalText"] == "not":
+                return("Action/Service")
     
 def pos(text):
     host = "http://localhost"
@@ -100,12 +102,13 @@ def predict():
     data = {"success": False}
     if flask.request.method == "POST":
         input_data = flask.request.get_json()
-        print(input_data)
-        query = input_data["query"] 
+        #print(input_data)
+        query = input_data["query"]
+        print(query)
         parts_of_speech = pos(query)
         named_entities = ner(query)
         #x["measures"] = out[0]
-        print(named_entities)
+        #print(named_entities)
         predictions = pos(query) + ner(query)
         #print(predictions)
         output = []
@@ -115,7 +118,7 @@ def predict():
             index = counter
             temp = [item]
             count = item[1]
-            print(temp)
+            #print(temp)
             if counter == len(parts_of_speech)-1:
                 output.append(temp)
                 break
@@ -137,11 +140,33 @@ def predict():
         for i in output:
             temp = [j[0] for j in i]
             temp = " ".join(temp)
-            output2.append(temp)
-        output2 = [i for i in output2 if i.lower() != "nixie"]
-        output2 = [i.replace("nixie", "") for i in output2]
-        data["predictions"] = "The entities are " + ",".join(output2)
-        data["success"] = True
+            temp2 = [j[2] for j in i]
+            if len(list(set(temp2))) >= 2:
+                if len(list(set(temp2))) == 2:
+                    if "Entity" in (list(set(temp2))) and "Action/Service" in (list(set(temp2))):
+                        descriptor = "Action/Service"
+                    if "Entity" in (list(set(temp2))) and "Descriptor" in (list(set(temp2))):
+                        descriptor = "Entity"
+                    if "Action/Service" in (list(set(temp2))) and "Descriptor" in (list(set(temp2))):
+                        descriptor = "Action/Service"
+                else:
+                    descriptor = "Entity"
+            else:
+                descriptor = list(set(temp2))[0]
+            output2.append([temp, descriptor])
+        output2 = [i for i in output2 if i[0].lower() != "nixie"]
+        #print(output2)
+        entities = [i[0] for i in output2 if i[1]=="Entity"]
+        services = [i[0] for i in output2 if i[1]=="Action/Service"]
+        #print(entities)
+        #print("The entities are " + ",".join(entities))
+        f = open("index.html","w")
+        f.write("<html>\n" + "<p> <b>Entities : </b>" +  "  ||  ".join(entities) + "</p>" + "\n<p><b>Action : </b>"  + "  ||  ".join(services)+ "</p>\n</html>")
+        f.close()
+        
+        data = {"success": True}
+        data["entities"] = "The entities are " + ",".join(entities)
+        data["services"] = "The services are " + ",".join(services)
         print(json.dumps(data))
     return flask.jsonify(data)
     
